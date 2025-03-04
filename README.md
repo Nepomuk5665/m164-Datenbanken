@@ -45,3 +45,31 @@ Wir haben außerdem über die Bedeutung der Zeichensatz-Wahl (Charset) gesproche
 
 Zum Schluss haben wir noch fortgeschrittene Datenbankkonzepte wie Partitioning, Storage Engines und Tablespaces angeschnitten, die für die Performance und Skalierung größerer Systeme relevant sind.
 
+# 04.03.2025
+
+Heute haben wir uns intensiv mit fortgeschrittenen Datenbankkonzepten und der praktischen Datenbearbeitung beschäftigt. Der Tag begann mit einer Wiederholung der Themen Generalisierung/Spezialisierung und Identifying Relationships, die wir letzte Woche behandelt hatten.
+
+Anschließend haben wir uns mit Datentypen in MySQL/MariaDB befasst. Ich habe eine Übersicht verschiedener Datentypen erstellt, darunter Zahlentypen wie DECIMAL, Zeichenketten (VARCHAR, CHAR), Datumsformate, Boolean-Werte und binäre Objekte. Die richtige Auswahl des Datentyps ist entscheidend für die Effizienz und Integrität der Datenbank.
+
+Wir haben drei wichtige Beziehungsarten in Datenbanken kennengelernt:
+1. **Mehrfachbeziehungen**: Wenn zwei Tabellen mehrere unabhängige Beziehungen haben, die verschiedene Sachverhalte darstellen (z.B. im Tourenplaner die verschiedenen Beziehungen zwischen Fahrten und Orten).
+2. **Rekursion (strenge Hierarchie)**: Eine Beziehung innerhalb derselben Tabelle, wobei ein Datensatz auf einen anderen der gleichen Tabelle verweist (z.B. Vorgesetzte/Mitarbeiter-Beziehung).
+3. **Einfache Hierarchie mit Zwischentabelle**: Für komplexere Strukturen, in denen z.B. ein Mitarbeiter mehrere Vorgesetzte haben kann.
+
+Besonders interessant fand ich das Stücklistenproblem, bei dem ein Produkt aus mehreren anderen Produkten bestehen kann, die wiederum aus weiteren Komponenten zusammengesetzt sein können.
+
+Wir haben dann unser Tourenplaner-Schema mit diesen Beziehungsarten erweitert und die Struktur mit Forward Engineering in eine echte Datenbank übertragen.
+
+Der nächste Teil des Tages konzentrierte sich auf die praktische Datenbearbeitung (DML - Data Manipulation Language):
+- INSERT-Befehle zum Hinzufügen neuer Datensätze
+- UPDATE zum Ändern bestehender Daten
+- DELETE zum Entfernen von Datensätzen
+- ALTER TABLE zum Ändern der Tabellenstruktur
+
+Anschließend haben wir uns mit dem SELECT-Befehl befasst, um Daten aus der Datenbank abzufragen. Wir haben verschiedene Anwendungsfälle geübt, wie das Auswählen bestimmter Spalten, das Filtern mit WHERE-Klauseln und die Verwendung von Funktionen innerhalb von SELECT-Anweisungen.
+
+Die Hauptaufgabe des Tages bestand darin, unseren erweiterten Tourenplaner mit Testdaten zu füllen. Wir haben Mitarbeiterdaten eingepflegt, Hierarchiebeziehungen definiert und Touren mit Start-, Ziel- und Via-Orten angelegt. Dabei habe ich gelernt, wie man komplexe UPDATE-Befehle mit Unterabfragen formuliert, um Daten effizient zu aktualisieren.
+
+Bei den Hierarchie-Beziehungen war es wichtig zu verstehen, dass NULL-Werte in der Transformationstabelle nicht zulässig sind, da jeder Eintrag eine konkrete Beziehung darstellt.
+
+Zum Abschluss haben wir unsere Daten mit SELECT- und JOIN-Befehlen überprüft und uns mit Herausforderungen wie referentieller Integrität bei Fremdschlüsseln beschäftigt.

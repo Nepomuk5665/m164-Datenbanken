@@ -73,3 +73,49 @@ Die Hauptaufgabe des Tages bestand darin, unseren erweiterten Tourenplaner mit T
 Bei den Hierarchie-Beziehungen war es wichtig zu verstehen, dass NULL-Werte in der Transformationstabelle nicht zulässig sind, da jeder Eintrag eine konkrete Beziehung darstellt.
 
 Zum Abschluss haben wir unsere Daten mit SELECT- und JOIN-Befehlen überprüft und uns mit Herausforderungen wie referentieller Integrität bei Fremdschlüsseln beschäftigt.
+
+Ich schreibe gerne die Fortsetzung deines Arbeitsjournals für heute, basierend auf dem, was du in den vorherigen Einträgen gelernt hast und dem aktuellen Unterrichtsmaterial.
+
+# 11.03.2025
+
+Heute haben wir uns mit fortgeschrittenen Datenbankbeziehungen und deren Implementierung in MySQL beschäftigt. Wir haben besonders die verschiedenen Typen von Constraints und deren Bedeutung für die referentielle Integrität untersucht.
+
+Zunächst haben wir die verschiedenen Arten von Beziehungen wiederholt und analysiert, welche davon in relationalen Datenbanksystemen realisierbar sind:
+- 1:1 Beziehungen werden in der Praxis als 1:c Beziehungen mit UNIQUE Constraint implementiert
+- 1:m und c:m Beziehungen werden als 1:mc bzw. c:mc umgesetzt
+- m:m Beziehungen können nur über Transformationstabellen realisiert werden
+
+Besonders wichtig war das Verständnis der Constraints NOT NULL (NN) und UNIQUE (UQ), die bei Fremdschlüsseln eingesetzt werden, um die gewünschten Beziehungstypen zu realisieren. Wir haben mit MySQL Workbench verschiedene Beziehungen modelliert und per Forward Engineering die entsprechenden SQL-Befehle erzeugt.
+
+In der Analyse des erzeugten SQL-Codes haben wir untersucht:
+- Wie NOT NULL Constraints für Fremdschlüssel definiert werden
+- Warum automatisch Indizes für Fremdschlüssel erstellt werden (Performance-Optimierung bei Joins)
+- Wie UNIQUE Constraints für Fremdschlüssel implementiert werden
+- Wie die referentielle Integrität durch CONSTRAINT-Anweisungen sichergestellt wird
+
+Wir haben auch gelernt, wie man Fremdschlüssel-Constraints nachträglich mit ALTER TABLE hinzufügen kann:
+```sql
+ALTER TABLE DetailTabelle
+  ADD CONSTRAINT FK_Detail_Master FOREIGN KEY (FremdschluesselSpalte)
+  REFERENCES MasterTabelle (PrimaerschluesselSpalte);
+```
+
+Im praktischen Teil haben wir Testdaten in verknüpfte Tabellen eingefügt und die Auswirkungen der Constraints getestet. Dabei wurde besonders deutlich, wie wichtig die referentielle Integrität ist: Bei definierten Constraints ist es nicht möglich, in einer Detail-Tabelle einen Fremdschlüsselwert einzufügen, der als Primärschlüssel in der Master-Tabelle nicht existiert.
+
+Im zweiten Teil des Tages haben wir uns mit der Mengenlehre beschäftigt und deren Anwendung auf Datenbankabfragen. Die verschiedenen Mengenoperationen (Vereinigung, Schnittmenge, Differenz) bilden die theoretische Grundlage für JOIN-Operationen in SQL.
+
+Wir haben verschiedene JOIN-Typen wiederholt und praktisch angewandt:
+- INNER JOIN für die Schnittmenge zweier Tabellen
+- LEFT JOIN und RIGHT JOIN für asymmetrische Verknüpfungen
+- FULL JOIN für die vollständige Vereinigung (in MySQL über UNION realisiert)
+
+Besonders interessant war für mich die Umsetzung komplexer Abfragen mit mehreren JOINs und die Erkenntnis, dass die Reihenfolge der Tabellen und der gewählte JOIN-Typ großen Einfluss auf das Ergebnis haben.
+
+Zum Abschluss haben wir noch Checkpoints zu wichtigen Konzepten durchgearbeitet:
+- Referentielle Integrität: Sicherstellung der Konsistenz zwischen verknüpften Tabellen
+- Constraints bei Beziehungen (NN, UQ, Fremdschlüssel-Constraints)
+- Unterschiede zwischen verschiedenen JOIN-Arten
+- Umsetzung von 1:1 und c:m Beziehungen
+- Konsequenzen fehlender Constraint-Anweisungen
+
+Auch wenn einige der fortgeschrittenen Konzepte anfangs komplex erschienen, hat mir die praktische Arbeit mit MySQL Workbench und die Analyse der generierten SQL-Befehle geholfen, die theoretischen Grundlagen besser zu verstehen. Ich sehe jetzt klarer, wie wichtig ein sorgfältiges Datenbankdesign und die korrekte Implementierung von Beziehungen für die Datenintegrität und -konsistenz sind.

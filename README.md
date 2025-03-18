@@ -119,3 +119,58 @@ Zum Abschluss haben wir noch Checkpoints zu wichtigen Konzepten durchgearbeitet:
 - Konsequenzen fehlender Constraint-Anweisungen
 
 Auch wenn einige der fortgeschrittenen Konzepte anfangs komplex erschienen, hat mir die praktische Arbeit mit MySQL Workbench und die Analyse der generierten SQL-Befehle geholfen, die theoretischen Grundlagen besser zu verstehen. Ich sehe jetzt klarer, wie wichtig ein sorgfältiges Datenbankdesign und die korrekte Implementierung von Beziehungen für die Datenintegrität und -konsistenz sind.
+
+# 18.03.2025
+
+Heute haben wir uns intensiv mit der praktischen Anwendung von komplexen SELECT-Abfragen in MySQL beschäftigt. Besonderes Augenmerk haben wir auf die korrekte Reihenfolge der SQL-Klauseln gelegt, da dies entscheidend für die Verarbeitung und das Ergebnis einer Abfrage ist.
+
+Ein wichtiger Merksatz, den wir für die Reihenfolge der SELECT-Klauseln gelernt haben, ist "WARUM GEHT HERBERT OFT LAUFEN". Dieser Merksatz hilft uns, die zwingende Reihenfolge in MySQL zu behalten:
+
+- **W**HERE: Filtert die Daten vor der Gruppierung
+- **G**ROUP BY: Fasst Daten in Gruppen zusammen
+- **H**AVING: Filtert die Daten nach der Gruppierung
+- **O**RDER BY: Sortiert das Ergebnis
+- **L**AUFEN (LIMIT): Begrenzt die Anzahl der Ergebniszeilen
+
+Was ich besonders interessant fand, ist dass diese Reihenfolge nicht nur eine syntaktische Anforderung ist, sondern auch die tatsächliche Verarbeitungsreihenfolge der Abfrage im Datenbanksystem widerspiegelt. Das erklärt, warum HAVING-Bedingungen erst nach GROUP BY angewendet werden können - sie operieren auf den bereits gruppierten Ergebnissen.
+
+Wir haben diese Konzepte mit praktischen Beispielen vertieft und komplexe Abfragen formuliert, die mehrere dieser Klauseln kombinieren. Zum Beispiel:
+
+```sql
+SELECT 
+    abteilung, 
+    COUNT(mitarbeiter_id) AS anzahl_mitarbeiter,
+    AVG(gehalt) AS durchschnittsgehalt
+FROM 
+    tbl_mitarbeiter
+WHERE 
+    einstellungsdatum > '2020-01-01'
+GROUP BY 
+    abteilung
+HAVING 
+    COUNT(mitarbeiter_id) > 5
+ORDER BY 
+    durchschnittsgehalt DESC
+LIMIT 3;
+```
+
+Diese Abfrage zeigt die drei Abteilungen mit dem höchsten Durchschnittsgehalt, in denen mehr als 5 Mitarbeiter nach 2020 eingestellt wurden.
+
+Wir haben auch den Unterschied zwischen WHERE und HAVING genauer betrachtet:
+- WHERE filtert einzelne Datensätze vor der Gruppierung
+- HAVING filtert Gruppen basierend auf Aggregatfunktionen nach der Gruppierung
+
+Ein weiteres wichtiges Konzept, das wir heute behandelt haben, ist die Verwendung von Aliassen (AS) sowohl für Tabellen als auch für Spalten, um die Lesbarkeit von Abfragen zu verbessern und komplexe Joins zu vereinfachen.
+
+In praktischen Übungen haben wir verschiedene Aggregatfunktionen (COUNT, SUM, AVG, MIN, MAX) mit GROUP BY und HAVING kombiniert, um aussagekräftige Analysen unserer Datensätze zu erstellen.
+
+Ich habe auch Notizen zu den Aspekten der Datenintegrität gemacht:
+1. Eindeutigkeit und Datenkonsistenz
+2. Referenzielle Integrität
+3. Korrekte Datentypen
+4. Sinnvolle Datenbeschränkungen
+5. Datenvalidierung vor dem Einfügen
+
+Besonders wichtig erscheint mir nach dem heutigen Tag das Verständnis dafür, wie professionelle Datenbanken mit Löschoperationen umgehen - nämlich dass echtes Löschen (DELETE) in vielen professionellen Umgebungen vermieden wird, um historische Daten zu bewahren und die Nachvollziehbarkeit zu gewährleisten.
+
+Für die nächste Woche plane ich, die Übungen zu den ON DELETE-Optionen bei Fremdschlüsseln (CASCADE, SET NULL, NO ACTION/RESTRICT) zu vertiefen und mehr über die praktischen Implikationen dieser Constraints zu lernen.

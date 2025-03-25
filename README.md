@@ -174,3 +174,109 @@ Ich habe auch Notizen zu den Aspekten der Datenintegrität gemacht:
 Besonders wichtig erscheint mir nach dem heutigen Tag das Verständnis dafür, wie professionelle Datenbanken mit Löschoperationen umgehen - nämlich dass echtes Löschen (DELETE) in vielen professionellen Umgebungen vermieden wird, um historische Daten zu bewahren und die Nachvollziehbarkeit zu gewährleisten.
 
 Für die nächste Woche plane ich, die Übungen zu den ON DELETE-Optionen bei Fremdschlüsseln (CASCADE, SET NULL, NO ACTION/RESTRICT) zu vertiefen und mehr über die praktischen Implikationen dieser Constraints zu lernen.
+
+
+# 25.03.2025
+
+Heute haben wir uns mit fortgeschrittenen Abfragetechniken und Datenimport-Methoden in MySQL beschäftigt. Der Schwerpunkt lag auf Subqueries und dem effizienten Import größerer Datenmengen mittels LOAD DATA INFILE.
+
+Wir begannen mit Subqueries (Unterabfragen), die eine mächtige Methode darstellen, um komplexe Abfragen zu formulieren. Ich habe gelernt, dass es zwei Haupttypen von Subqueries gibt:
+
+1. **Skalare Unterabfragen**: Diese liefern genau einen Wert zurück (eine Zeile, eine Spalte) und können mit Vergleichsoperatoren wie =, >, <, >= und <= verwendet werden.
+
+2. **Nicht-skalare Unterabfragen**: Diese liefern mehrere Werte zurück und werden typischerweise mit Operatoren wie IN, NOT IN, EXISTS oder NOT EXISTS kombiniert.
+
+Ein Beispiel für eine skalare Unterabfrage, das wir behandelt haben:
+
+```sql
+SELECT city_destination, ticket_price, travel_time, transportation 
+FROM one_way_ticket
+WHERE ticket_price < (
+    SELECT ticket_price FROM one_way_ticket
+    WHERE city_destination = 'Bariloche' AND city_origin = 'Paris'
+) AND city_origin = 'Paris';
+```
+
+Hier wird zuerst die Unterabfrage ausgeführt, um den Ticketpreis für die Strecke Paris-Bariloche zu ermitteln, und dann werden alle Ziele von Paris aus gesucht, die günstiger sind.
+
+Für nicht-skalare Unterabfragen haben wir folgendes Beispiel betrachtet:
+
+```sql
+SELECT name, age, country
+FROM users
+WHERE country IN (
+   SELECT name FROM country WHERE region = 'Europa'
+);
+```
+
+Diese Abfrage liefert alle Benutzer, die in europäischen Ländern leben, indem sie zunächst alle europäischen Länder ermittelt und dann die Benutzer filtert.
+
+Im zweiten Teil des Tages haben wir uns mit dem Bulkimport von Daten beschäftigt, speziell mit dem LOAD DATA INFILE Befehl in MySQL. Dies ist besonders nützlich für den Import großer Datenmengen aus CSV-Dateien.
+
+Wir haben den Unterschied zwischen dem Import vom Server und vom Client gelernt:
+- `LOAD DATA INFILE` sucht die Datei im Dateisystem des Servers
+- `LOAD DATA LOCAL INFILE` liest die Datei vom Client-Rechner
+
+Für den Client-Import waren einige Konfigurationsänderungen notwendig:
+```sql
+SET GLOBAL local_infile=1;
+```
+
+Außerdem mussten wir in der Workbench-Verbindung den Parameter `OPT_LOCAL_INFILE=1` setzen.
+
+Besonders interessant fand ich die vielfältigen Anpassungsmöglichkeiten beim Datenimport:
+
+1. **Datumsformate anpassen**:
+```sql
+LOAD DATA LOCAL INFILE 'C:/M164/import.csv'
+INTO TABLE meine_tabelle
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS
+(id, name, @datum, wert)
+SET geburtsdatum = STR_TO_DATE(@datum, '%d.%m.%Y');
+```
+
+2. **Spaltenreihenfolge ändern**:
+Man kann die Reihenfolge der Spalten in der CSV-Datei an die Tabellenstruktur anpassen, indem man die Spalten in der richtigen Reihenfolge auflistet.
+
+3. **Spalten überspringen**:
+Mit Hilfe von Platzhalter-Variablen können unerwünschte Spalten übersprungen werden:
+```sql
+(id, name, @skip_spalte, alter, @skip_spalte2)
+```
+
+4. **Werte transformieren**:
+Mit der SET-Klausel können Werte beim Import transformiert werden, z.B. mit CASE-Statements:
+```sql
+(id, name, @ort)
+SET ort_id = CASE
+    WHEN @ort = 'Zürich' THEN 1
+    WHEN @ort = 'Basel' THEN 2
+    ELSE NULL
+END;
+```
+
+In einer praktischen Übung haben wir die Normalisierung einer Adressdatenbank implementiert:
+1. Import von Adressdaten in eine temporäre Tabelle `tbl_Adr`
+2. Erstellung eines normalisierten Schemas mit Tabellen für Personen, Straßen und Orte
+3. Übertragen der Daten mit INSERT INTO ... SELECT
+4. Überprüfung der Datenintegrität durch JOINs
+5. Direkter Import in die normalisierten Tabellen ohne Zwischenstation
+
+Eine wichtige Erkenntnis war die Methode zum Finden und Bereinigen redundanter Datensätze:
+```sql
+SELECT Ortsbezeichnung, COUNT(*) as Anzahl FROM tbl_Ort
+GROUP BY Ortsbezeichnung
+HAVING COUNT(*) > 1;
+```
+
+Zum Abschluss haben wir gelernt, wie man Daten aus einer Tabelle in eine andere einfügt:
+```sql
+INSERT INTO customers (name, email, address)
+SELECT name, email, address FROM new_customers;
+```
+
+Diese Technik ist besonders nützlich, um Daten aus temporären Import-Tabellen in eine normalisierte Datenbankstruktur zu überführen.
+
+Insgesamt war heute ein sehr praxisorientierter Tag, der mir gezeigt hat, wie man große Datenmengen effizient verarbeiten und in eine strukturierte Datenbank importieren kann. Diese Kenntnisse werden mir bei der Arbeit mit realen Datensätzen sehr nützlich sein.

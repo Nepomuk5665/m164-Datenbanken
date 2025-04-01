@@ -280,3 +280,73 @@ SELECT name, email, address FROM new_customers;
 Diese Technik ist besonders nützlich, um Daten aus temporären Import-Tabellen in eine normalisierte Datenbankstruktur zu überführen.
 
 Insgesamt war heute ein sehr praxisorientierter Tag, der mir gezeigt hat, wie man große Datenmengen effizient verarbeiten und in eine strukturierte Datenbank importieren kann. Diese Kenntnisse werden mir bei der Arbeit mit realen Datensätzen sehr nützlich sein.
+
+
+# 01.04.2025
+
+Heute haben wir uns intensiv mit Datenbankbackups und verschiedenen Sicherungsstrategien beschäftigt. Dieses Thema ist für den professionellen Umgang mit Datenbanken äußerst wichtig, da der Schutz von Daten vor Verlust essenziell ist.
+
+Wir begannen mit einer Einführung in die theoretischen Grundlagen von Datenbankbackups. Dabei haben wir verschiedene Backup-Typen kennengelernt:
+
+- **Vollbackup**: Sicherung der gesamten Datenbank
+- **Differentielles Backup**: Sicherung aller Änderungen seit dem letzten Vollbackup
+- **Inkrementelles Backup**: Sicherung aller Änderungen seit dem letzten Backup (egal welcher Art)
+
+Außerdem haben wir die Unterschiede zwischen logischen und physischen Backups verstanden:
+- **Logische Backups**: Exportieren die Datenbank in SQL-Befehle (DDL und DML), die beim Restore ausgeführt werden
+- **Physische Backups**: Kopieren die tatsächlichen Datenbankdateien des Dateisystems
+
+Im praktischen Teil haben wir zunächst mit mysqldump gearbeitet, einem Tool für logische Backups. Ich konnte erfolgreich ein Backup meiner Tourenplaner-Datenbank erstellen:
+
+```bash
+mysqldump -u root -p --port=3306 tourenplaner > C:\BACKUP\tp_dump.sql
+```
+
+Besonders interessant war die Analyse des erzeugten Backup-Files. Es enthält nicht nur die INSERT-Statements für meine Daten, sondern auch alle DDL-Befehle, um die Tabellenstruktur, Indizes und Constraints wieder herzustellen. Außerdem werden zu Beginn des Backups alle DROP TABLE-Befehle ausgeführt, um eine saubere Neuinstallation zu gewährleisten.
+
+Um das Backup zu verifizieren, habe ich einen Restore-Test durchgeführt, indem ich die Datenbank gelöscht und aus dem Backup wiederhergestellt habe:
+
+```sql
+DROP DATABASE tourenplaner;
+CREATE DATABASE tourenplaner;
+USE tourenplaner;
+SOURCE C:\BACKUP\tp_dump.sql;
+```
+
+Die Datenbank wurde erfolgreich wiederhergestellt, was die Integrität des Backups bestätigt hat.
+
+Danach haben wir uns mit fortgeschrittenen Backup-Strategien beschäftigt. Besonders wichtig war das Verständnis des Unterschieds zwischen Online- und Offline-Backups:
+- **Online-Backups**: Werden während des laufenden Datenbankbetriebs erstellt
+- **Offline-Backups**: Erfordern ein Herunterfahren der Datenbank
+
+Wir haben auch gelernt, was Snapshot-Backups sind - eine spezielle Form des physischen Backups, bei dem ein konsistenter "Schnappschuss" der Datenbank zu einem bestimmten Zeitpunkt erstellt wird.
+
+Mit MariaBackup habe ich auch ein physisches Backup erstellt, was eine andere Herangehensweise erforderte:
+
+```bash
+mariabackup --backup --target-dir=C:/BACKUP/physical --user=root --password=mypassword
+```
+
+Interessant war hierbei der notwendige "Prepare"-Schritt vor der Wiederherstellung, der sicherstellt, dass die Backup-Dateien in einem konsistenten Zustand sind:
+
+```bash
+mariabackup --prepare --target-dir=C:/BACKUP/physical
+```
+
+Für die Wiederherstellung wird dann der Parameter --copy-back verwendet:
+
+```bash
+mariabackup --copy-back --target-dir=C:/BACKUP/physical
+```
+
+MariaBackup unterstützt auch inkrementelle Backups, was für regelmäßige Sicherungen besonders nützlich ist, da es Zeit und Speicherplatz spart:
+
+```bash
+mariabackup --backup --target-dir=C:/BACKUP/incremental --incremental-basedir=C:/BACKUP/physical --user=root --password=mypassword
+```
+
+Zum Abschluss haben wir externe Backup-Programme wie Acronis betrachtet, die nicht nur Datenbanken, sondern ganze Systeme sichern können.
+
+Ich habe heute viel über die Wichtigkeit regelmäßiger und durchdachter Backup-Strategien gelernt. Besonders in Unternehmensumgebungen ist es entscheidend, einen geeigneten Mix aus Voll-, differentiellen und inkrementellen Backups zu implementieren, um sowohl Datensicherheit als auch Performanz zu gewährleisten. Die praktischen Übungen haben mir geholfen, die theoretischen Konzepte besser zu verstehen und anzuwenden.
+
+

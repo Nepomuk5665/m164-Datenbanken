@@ -350,3 +350,111 @@ Zum Abschluss haben wir externe Backup-Programme wie Acronis betrachtet, die nic
 Ich habe heute viel über die Wichtigkeit regelmäßiger und durchdachter Backup-Strategien gelernt. Besonders in Unternehmensumgebungen ist es entscheidend, einen geeigneten Mix aus Voll-, differentiellen und inkrementellen Backups zu implementieren, um sowohl Datensicherheit als auch Performanz zu gewährleisten. Die praktischen Übungen haben mir geholfen, die theoretischen Konzepte besser zu verstehen und anzuwenden.
 
 
+# 08.04.2025
+
+Heute habe ich mich intensiv mit dem Thema Daten-Normalisierung und dem effizienten Import von normalisierten Daten in MySQL beschäftigt. Wir haben uns der praktischen Aufgabe "DB_Freifaecher" gewidmet, die als Vorbereitung für unsere kommende Leistungsbeurteilung dient.
+
+Der Ausgangspunkt war eine Excel-Tabelle mit Daten zu Freifächern und SchülerInnen. Unsere Aufgabe bestand darin, diese in eine normalisierte Datenbankstruktur zu überführen. Ich habe folgende Schritte durchgeführt:
+
+1. **Erstellung der ersten Normalform (1NF)**: Zunächst habe ich die Excel-Tabelle analysiert und alle nicht-atomaren Felder identifiziert. Besonders bei den Freifächern, wo mehrere in einer Zelle standen, musste ich die Daten aufspalten. Ich habe die Daten in Excel entsprechend aufbereitet und als mehrere CSV-Dateien exportiert.
+
+2. **Logisches ERD erstellen**: Basierend auf der 1NF habe ich ein logisches Entity-Relationship-Diagramm mit fünf Tabellen erstellt:
+   - `tbl_schueler` (mit SchülerID, Name, Vorname, Geburtsdatum)
+   - `tbl_klasse` (mit KlasseID, Klassenbezeichnung)
+   - `tbl_freifach` (mit FreifachID, Freifachbezeichnung)
+   - `tbl_lehrer` (mit LehrerID, Name, Vorname)
+   - `tbl_belegung` (als Zwischentabelle für die m:n Beziehung zwischen SchülerInnen und Freifächern)
+
+   Bei der Definition der Kardinalitäten habe ich festgestellt, dass ein/e SchülerIn in genau einer Klasse sein muss (1:n), aber mehrere Freifächer belegen kann (m:n). Ein Freifach wird von genau einem/einer LehrerIn unterrichtet (1:n).
+
+3. **Physisches ERD und Constraints**: Im nächsten Schritt habe ich das physische ERD erstellt und dabei besonders auf die korrekten Constraints geachtet:
+   - NOT NULL (NN) für Pflichtfelder wie Namen und Fremdschlüssel
+   - UNIQUE (UQ) für Felder, die eindeutig sein müssen
+   - Geeignete Datentypen (VARCHAR für Namen, DATE für Geburtsdaten, etc.)
+   - Korrekte Fremdschlüssel-Constraints mit den ON DELETE/UPDATE-Optionen
+
+   Besonders interessant war die Implementierung der Zwischentabelle `tbl_belegung`, die neben den beiden Fremdschlüsseln (SchülerID und FreifachID) auch zusätzliche Attribute wie Anmeldedatum enthalten konnte.
+
+4. **Datentransfer mit LOAD DATA LOCAL INFILE**: Der praktische Teil bestand im Import der CSV-Daten in die normalisierten Tabellen. Hier ein Beispiel für den Import der Schülerdaten:
+
+```sql
+LOAD DATA LOCAL INFILE 'C:/M164/schueler.csv'
+INTO TABLE tbl_schueler
+FIELDS TERMINATED BY ';'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS
+(Name, Vorname, @gebdat, @klasse)
+SET 
+    Geburtsdatum = STR_TO_DATE(@gebdat, '%d.%m.%Y'),
+    FK_KlasseID = (SELECT KlasseID FROM tbl_klasse WHERE Klassenbezeichnung = @klasse);
+```
+
+Hierbei war es besonders wichtig, die Fremdschlüsselbeziehungen korrekt abzubilden. Durch die Verwendung von Hilfsvariablen (mit @-Präfix) und der SET-Klausel konnte ich die Werte entsprechend transformieren und die IDs korrekt zuordnen.
+
+5. **Datenbereinigung**: Nach dem Import musste ich noch einige Inkonsistenzen bereinigen:
+   - Entfernen von Duplikaten durch Identifikation mit GROUP BY und HAVING
+   - Behandlung leerer Werte (NULL vs. leerer String)
+   - Korrektur von Schreibweisen bei Namen und Bezeichnungen
+
+6. **Datenvalidierung**: Mit komplexen SELECT-Abfragen und JOINS habe ich geprüft, ob die importierten Daten mit den Originaldaten übereinstimmen:
+
+```sql
+SELECT s.Name, s.Vorname, k.Klassenbezeichnung, f.Freifachbezeichnung, l.Name as Lehrer
+FROM tbl_schueler s
+JOIN tbl_klasse k ON s.FK_KlasseID = k.KlasseID
+JOIN tbl_belegung b ON s.SchuelerID = b.FK_SchuelerID
+JOIN tbl_freifach f ON b.FK_FreifachID = f.FreifachID
+JOIN tbl_lehrer l ON f.FK_LehrerID = l.LehrerID
+ORDER BY s.Name, s.Vorname;
+```
+
+7. **Testdatengenerierung**: Eine interessante Herausforderung war die Erzeugung von 290 zusätzlichen SchülerInnen-Datensätzen mit einem Testdatengenerator. Ich habe einen Online-Generator genutzt und die Daten dann in Excel so angepasst, dass sie zu unserer Datenbankstruktur passen (zufällige Verteilung auf Klassen und Freifächer).
+
+8. **Komplexe Abfragen**: Zum Abschluss habe ich die geforderten SELECT-Abfragen implementiert:
+
+```sql
+-- Anzahl Teilnehmer von Inge Sommer
+SELECT COUNT(*) as Teilnehmeranzahl
+FROM tbl_belegung b
+JOIN tbl_freifach f ON b.FK_FreifachID = f.FreifachID
+JOIN tbl_lehrer l ON f.FK_LehrerID = l.LehrerID
+WHERE l.Name = 'Sommer' AND l.Vorname = 'Inge';
+
+-- Klassen mit Anzahl SchülerInnen in Freifächern
+SELECT k.Klassenbezeichnung, COUNT(DISTINCT b.FK_SchuelerID) as AnzahlSchueler
+FROM tbl_klasse k
+JOIN tbl_schueler s ON k.KlasseID = s.FK_KlasseID
+JOIN tbl_belegung b ON s.SchuelerID = b.FK_SchuelerID
+GROUP BY k.Klassenbezeichnung
+ORDER BY k.Klassenbezeichnung;
+
+-- SchülerInnen in Chor oder Elektronik
+SELECT s.Name, s.Vorname, f.Freifachbezeichnung
+FROM tbl_schueler s
+JOIN tbl_belegung b ON s.SchuelerID = b.FK_SchuelerID
+JOIN tbl_freifach f ON b.FK_FreifachID = f.FreifachID
+WHERE f.Freifachbezeichnung IN ('Chor', 'Elektronik')
+ORDER BY f.Freifachbezeichnung, s.Name, s.Vorname;
+```
+
+Die Ergebnisse habe ich mit SELECT INTO OUTFILE in eine Datei exportiert:
+
+```sql
+SELECT s.Name, s.Vorname, f.Freifachbezeichnung
+INTO OUTFILE 'C:/M164/chor_elektronik.csv'
+FIELDS TERMINATED BY ';'
+LINES TERMINATED BY '\r\n'
+FROM tbl_schueler s
+JOIN tbl_belegung b ON s.SchuelerID = b.FK_SchuelerID
+JOIN tbl_freifach f ON b.FK_FreifachID = f.FreifachID
+WHERE f.Freifachbezeichnung IN ('Chor', 'Elektronik');
+```
+
+Zum Abschluss habe ich ein vollständiges Backup der Datenbank erstellt:
+
+```sql
+mysqldump -u root -p --databases freifaecher > C:/M164/backup_freifaecher.sql
+```
+
+Insgesamt war heute ein sehr praxisorientierter Tag, der das theoretische Wissen über Normalisierung und die technischen Aspekte des Datenimports zusammengeführt hat. Ich fühle mich jetzt gut vorbereitet für die kommende LB2, da ich alle wichtigen Schritte von der Datenanalyse bis zur Implementierung einer normalisierten Datenbank durchgeführt habe. Besonders der Umgang mit Fremdschlüsselbeziehungen beim Datenimport war eine wertvolle Erfahrung, die mir in der Praxis sicher noch oft nützlich sein wird.
+

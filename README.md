@@ -458,3 +458,167 @@ mysqldump -u root -p --databases freifaecher > C:/M164/backup_freifaecher.sql
 
 Insgesamt war heute ein sehr praxisorientierter Tag, der das theoretische Wissen über Normalisierung und die technischen Aspekte des Datenimports zusammengeführt hat. Ich fühle mich jetzt gut vorbereitet für die kommende LB2, da ich alle wichtigen Schritte von der Datenanalyse bis zur Implementierung einer normalisierten Datenbank durchgeführt habe. Besonders der Umgang mit Fremdschlüsselbeziehungen beim Datenimport war eine wertvolle Erfahrung, die mir in der Praxis sicher noch oft nützlich sein wird.
 
+
+# 06.05.2025
+
+Heute habe ich mich selbständig mit zwei fortgeschrittenen SQL-Konzepten beschäftigt: Stored Procedures und Common Table Expressions (CTEs). Da dies der letzte Tag des Moduls war, habe ich versucht, diese Konzepte mit den vorher gelernten Inhalten zu verknüpfen und einen guten Abschluss zu finden.
+
+Ich habe zunächst eigenständig die Grundlagen von Stored Procedures erarbeitet. Eine Stored Procedure ist eine vorbereitete SQL-Anweisung (oder mehrere), die in der Datenbank gespeichert und bei Bedarf aufgerufen werden kann. Ich habe festgestellt, dass die Vorteile vor allem in der Wiederverwendbarkeit von Code, besserer Performance durch einmalige Kompilierung, erhöhter Sicherheit und Vereinfachung komplexer Datenbankoperationen liegen.
+
+Die Syntax für eine einfache Stored Procedure habe ich selbständig implementiert:
+
+```sql
+DELIMITER //
+CREATE PROCEDURE GetAllMitarbeiter()
+BEGIN
+    SELECT * FROM tbl_mitarbeiter;
+END //
+DELIMITER ;
+```
+
+Ich habe verstanden, dass der DELIMITER-Befehl wichtig ist, da er den Trennzeichenwechsel von Semikolon zu '//' ermöglicht, damit das Semikolon innerhalb der Procedure nicht als Ende des CREATE-Befehls interpretiert wird.
+
+Besonders herausfordernd war für mich die Arbeit mit Ein- und Ausgabeparametern, aber nach einigen Versuchen habe ich es selbständig geschafft:
+
+```sql
+DELIMITER //
+CREATE PROCEDURE GetMitarbeiterByAbteilung(
+    IN p_abteilung VARCHAR(50),
+    OUT p_anzahl INT
+)
+BEGIN
+    SELECT COUNT(*) INTO p_anzahl 
+    FROM tbl_mitarbeiter 
+    WHERE abteilung = p_abteilung;
+    
+    SELECT * FROM tbl_mitarbeiter 
+    WHERE abteilung = p_abteilung;
+END //
+DELIMITER ;
+```
+
+Für unseren Tourenplaner habe ich eigenständig eine Procedure erstellt, die eine neue Tour anlegt und gleichzeitig die Freigabe durch einen Disponenten protokolliert:
+
+```sql
+DELIMITER //
+CREATE PROCEDURE ErstelleTour(
+    IN p_startort_id INT,
+    IN p_zielort_id INT,
+    IN p_fahrer_id INT,
+    IN p_disponent_id INT,
+    IN p_datum DATETIME,
+    OUT p_tour_id INT
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_tour_id = -1;
+    END;
+    
+    START TRANSACTION;
+    
+    INSERT INTO tbl_tour (FK_StartOrt_ID, FK_ZielOrt_ID, FK_Fahrer_ID, Datum)
+    VALUES (p_startort_id, p_zielort_id, p_fahrer_id, p_datum);
+    
+    SET p_tour_id = LAST_INSERT_ID();
+    
+    INSERT INTO tbl_freigabe (FK_Tour_ID, FK_Disponent_ID, Freigabezeitpunkt)
+    VALUES (p_tour_id, p_disponent_id, NOW());
+    
+    COMMIT;
+END //
+DELIMITER ;
+```
+
+Dabei war es mir wichtig, auch Fehlerbehandlung und Transaktionen zu implementieren, um die Datenintegrität zu gewährleisten - ein Thema, das wir bereits in früheren Wochen behandelt hatten.
+
+Im zweiten Teil des Tages habe ich mich selbständig mit Common Table Expressions (CTEs) beschäftigt. Ich habe verstanden, dass CTEs benannte temporäre Ergebnismengen sind, die innerhalb einer Abfrage existieren und die Lesbarkeit komplexer Abfragen deutlich verbessern können.
+
+Ich habe eigenständig ein einfaches Beispiel entwickelt:
+
+```sql
+WITH MitarbeiterAbteilung AS (
+    SELECT m.Name, m.Vorname, a.Bezeichnung AS Abteilung
+    FROM tbl_mitarbeiter m
+    JOIN tbl_abteilung a ON m.FK_Abteilung_ID = a.Abteilung_ID
+)
+SELECT * FROM MitarbeiterAbteilung
+WHERE Abteilung = 'Vertrieb';
+```
+
+Besonders faszinierend fand ich die rekursiven CTEs, die ich am Beispiel einer Mitarbeiterhierarchie ausprobiert habe:
+
+```sql
+WITH RECURSIVE MitarbeiterHierarchie AS (
+    -- Basis-Fall: Mitarbeiter ohne Vorgesetzte (oberste Ebene)
+    SELECT MA_ID, Name, Vorname, FK_Vorgesetzter_ID, 1 AS Ebene
+    FROM tbl_mitarbeiter
+    WHERE FK_Vorgesetzter_ID IS NULL
+    
+    UNION ALL
+    
+    -- Rekursiver Fall: Mitarbeiter mit Vorgesetzten
+    SELECT m.MA_ID, m.Name, m.Vorname, m.FK_Vorgesetzter_ID, h.Ebene + 1
+    FROM tbl_mitarbeiter m
+    JOIN MitarbeiterHierarchie h ON m.FK_Vorgesetzter_ID = h.MA_ID
+)
+SELECT MA_ID, Name, Vorname, Ebene
+FROM MitarbeiterHierarchie
+ORDER BY Ebene, Name;
+```
+
+Diese Technik löst elegant das Problem der Hierarchieabbildung, das wir in früheren Lektionen mit Transformationstabellen gelöst hatten. Die rekursive Abfrage ist meiner Meinung nach viel eleganter und leichter zu verstehen.
+
+Zum Abschluss des Kurses habe ich noch selbständig eine Kombination von Stored Procedures und CTEs entwickelt, um komplexe Berichte zu erstellen:
+
+```sql
+DELIMITER //
+CREATE PROCEDURE TourenBerichtMitCTE(
+    IN p_startdatum DATE,
+    IN p_enddatum DATE
+)
+BEGIN
+    WITH TourenStatistik AS (
+        SELECT 
+            t.Tour_ID,
+            t.Datum,
+            f.Name AS Fahrer,
+            o_start.Ortsbezeichnung AS Startort,
+            o_ziel.Ortsbezeichnung AS Zielort,
+            COUNT(v.Via_ID) AS AnzahlViaOrte
+        FROM tbl_tour t
+        JOIN tbl_fahrer f ON t.FK_Fahrer_ID = f.Fahrer_ID
+        JOIN tbl_ort o_start ON t.FK_StartOrt_ID = o_start.Ort_ID
+        JOIN tbl_ort o_ziel ON t.FK_ZielOrt_ID = o_ziel.Ort_ID
+        LEFT JOIN tbl_via v ON t.Tour_ID = v.FK_Tour_ID
+        WHERE t.Datum BETWEEN p_startdatum AND p_enddatum
+        GROUP BY t.Tour_ID, t.Datum, f.Name, o_start.Ortsbezeichnung, o_ziel.Ortsbezeichnung
+    ),
+    FahrerStatistik AS (
+        SELECT
+            Fahrer,
+            COUNT(Tour_ID) AS AnzahlTouren,
+            AVG(AnzahlViaOrte) AS DurchschnittViaOrte
+        FROM TourenStatistik
+        GROUP BY Fahrer
+    )
+    SELECT * FROM FahrerStatistik
+    ORDER BY AnzahlTouren DESC;
+END //
+DELIMITER ;
+```
+
+Diese Procedure erstellt einen Bericht über die Aktivitäten der Fahrer in einem bestimmten Zeitraum und nutzt CTEs, um die Abfrage übersichtlich zu strukturieren.
+
+Als Abschluss des Moduls habe ich noch ein vollständiges Backup unserer Tourenplaner-Datenbank erstellt, einschließlich aller Stored Procedures, die ich heute programmiert habe:
+
+```sql
+mysqldump -u root -p --databases tourenplaner --routines > C:/M164/final_backup_tourenplaner.sql
+```
+
+Rückblickend auf das gesamte Modul bin ich beeindruckt, wie viel ich über Datenbanken gelernt habe. Von den grundlegenden Konzepten der Normalisierung über Beziehungstypen, JOIN-Operationen, bis hin zu fortgeschrittenen Konzepten wie Stored Procedures und CTEs. Ich sehe jetzt viel klarer, wie wichtig ein sorgfältiges Datenbankdesign für die Entwicklung robuster Anwendungen ist. 
+
+Besonders wertvoll fand ich die praktische Arbeit mit dem Tourenplaner-Beispiel, das uns durch das gesamte Modul begleitet hat. So konnte ich verschiedene Konzepte an einem realistischen Beispiel anwenden und die Zusammenhänge besser verstehen.
+
+Die heute erlernten Konzepte der Stored Procedures und CTEs haben das Modul perfekt abgerundet, da sie zeigen, wie man komplexe Datenbankoperationen elegant und wartbar implementieren kann. Ich freue mich darauf, diese Kenntnisse in zukünftigen Projekten anzuwenden.
